@@ -1,12 +1,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-
 use ink_lang as ink;
 
+// mod base58check;
 #[ink::contract]
 mod inkrement {
-
-    use ink_storage::{traits::SpreadAllocate};
+    use ink_storage::traits::SpreadAllocate;
     use ink_prelude::{string::String, vec::Vec};
+
+
+
+
     /// Defines the storage of your contract.
     /// Add new fields to the below struct in order
     /// to add new static storage fields to your contract.
@@ -24,7 +27,7 @@ mod inkrement {
         founders_rejected: ink_storage::Mapping<AccountId, bool>,
         founders_completed: ink_storage::Mapping<AccountId, bool>,
         founders_amount_needed: ink_storage::Mapping<AccountId, u128>,
-        founders_amount_funded: ink_storage::Mapping<AccountId, u128>,
+        founders_amount_funded: ink_storage::Mapping<AccountId, u128>
     }
 
     impl Inkrement {
@@ -35,6 +38,7 @@ mod inkrement {
             assert!(initial_founder_picos_needed != 0, "initial founder picos must not be 0");
             ink_lang::utils::initialize_contract(|contract: &mut Self| {
                 let caller = Self::env().caller();
+                contract.value = 0;
                 contract.name = init_name;
                 contract.enabled = false;
                 contract.defunct = false;
@@ -91,41 +95,40 @@ mod inkrement {
             let value = self.env().transferred_value();
             ink_env::debug_println!(
                 "received payment: {} from {:?}",
-                self.env().transferred_value(),
+                value,
                 caller
             );
-            // find founder in founders_amount_needed
 
+            // find founder in founders_amount_needed
             let mut is_found = false;
             for founder in &self.founders {
                 if founder == &caller {
                     is_found = true;
                 }
             }
-
             // if not found, fail
-            assert!(is_found == true, "caller is not a founder.");
+            assert!(is_found, "caller is not a founder.");
 
             // find founders_funded, if true, fail
             let is_completed = match self.founders_completed.get(caller) {
                 Some(v) => v,
                 None => false
             };
-
             assert!(is_completed == false, "founder is already funded or completed.");
 
-            // if found, find founders_amount_needed > founders_amount_funded
-            let amount_needed = match self.founders_amount_needed.get(caller) {
-                Some(v) => v,
-                None => 0,
-            };
+            let amount_needed = self.founders_amount_needed.get(caller).expect("amount_needed not found for founder.");
 
             let mut amount_funded = match self.founders_amount_funded.get(caller) {
                 Some(v) => v,
                 None => 0
             };
 
-            assert!(amount_needed >= amount_funded, "no more units needed for user");
+            if amount_funded >= amount_needed {
+                self.founders_completed.insert(caller, &true);
+                panic!("overfund -- no more picos needed for founder");
+            }
+
+            
 
             // OK, get amount units, and add to founders_amount_funded
             amount_funded += value;
@@ -137,8 +140,9 @@ mod inkrement {
                 self.founders_completed.insert(caller, &true);
             }
 
-            let mut completed_founders_count = 0;
 
+
+            let mut completed_founders_count = 0;
             let all_founders_count = self.founders.len() as i32;
 
             for founder in &self.founders {
@@ -182,7 +186,7 @@ mod inkrement {
             }
 
             // if not found, fail
-            assert!(is_found == true, "account is not a founder.");
+            assert!(is_found == false, "account is not a founder.");
             
             // find founder in founders_rejected, founders_required
             let founder_rejected = match self.founders_rejected.get(caller) {
@@ -224,14 +228,10 @@ mod inkrement {
                 if completed_founders_count == all_founders_count {
                     // ACTIVATE TRIBE BY SETTING enabled = true
                     self.enabled = true;
-                }
-    
-    
+                }    
             }
-
             // if any founder has already funded tribe, return funds to each founder
             // TODO
-            
         }
 
         #[ink(message)]
@@ -267,6 +267,14 @@ mod inkrement {
                 Some(v) => v,
                 None => false
             };
+
+
+
+            // let founder_key: String = match  {
+            //     Ok(v) => v,
+            //     Err(e) => e.to_string()
+            // };
+
 
             if is_founder == true {
                 ink_prelude::format!(
