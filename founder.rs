@@ -2,7 +2,7 @@
 use ink_env::AccountId;
 use ink_storage::traits::{SpreadLayout, PackedLayout};
 use ink_prelude::{string::String};
-use crate::inkrement::{FOUNDER_ACCEPTED, FOUNDER_REJECTED};
+use crate::inkrement::{FOUNDER_ACCEPTED, FOUNDER_REJECTED, FOUNDER_PENDING};
 
 #[derive(PackedLayout, SpreadLayout, scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(::scale_info::TypeInfo))]
@@ -16,8 +16,19 @@ pub struct Founder {
 }
 
 impl Founder {
+    pub fn initial_founder(id: AccountId, amount_promised: u128) -> Self {
+       Founder {
+            id: id,
+            initial: true,
+            required: true,
+            vote_action: FOUNDER_PENDING,
+            amount_promised: amount_promised,
+            amount_funded: 0
+        }
+    }
+
     pub fn is_accepted(&self) -> bool {
-        return self.vote_action == FOUNDER_ACCEPTED;
+       return self.vote_action == FOUNDER_ACCEPTED;
     }
 
     pub fn fund(&mut self, amount: u128) {
@@ -36,6 +47,7 @@ impl Founder {
     }
 
     pub fn is_completed(&self) -> bool {
+
         if !self.required && self.is_rejected() {
             return true;
         } else if self.is_funded() {
@@ -85,7 +97,7 @@ mod founder_tests {
            amount_promised: 1234,
            amount_funded: 0
        };
-        assert_eq!(founder.id, alice);
+       assert_eq!(founder.id, alice);
     }
 
     /// We test a simple use case of our contract.

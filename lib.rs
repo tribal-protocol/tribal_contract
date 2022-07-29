@@ -35,16 +35,10 @@ mod inkrement {
                 let caller = Self::env().caller();
                 contract.name = init_name;
                 contract.enabled = false;
-                contract.defunct = false;
-                contract.founders.insert(0, &ink_prelude::vec![Founder {
-                    // caller
-                    id: caller,
-                    initial: true,
-                    required: true,
-                    vote_action: FOUNDER_PENDING,
-                    amount_promised: initial_founder_picos_needed,
-                    amount_funded: 0
-                }]);
+                contract.defunct = false;                
+                contract.founders.insert(0, &ink_prelude::vec![
+                    Founder::initial_founder(caller, initial_founder_picos_needed)
+                ]);
             })
         }
 
