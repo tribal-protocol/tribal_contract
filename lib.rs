@@ -1,65 +1,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 use ink_lang as ink;
 
-// mod base58check;
+mod founder;
+
 #[ink::contract]
 mod inkrement {
-    use ink_storage::traits::{SpreadAllocate, SpreadLayout, PackedLayout};
+    use ink_storage::traits::{SpreadAllocate};
     use ink_prelude::{string::String, vec::Vec};
+    use crate::founder::*;
 
     pub const FOUNDER_REJECTED: i32 = -1;
     pub const FOUNDER_PENDING: i32 = 0;
     pub const FOUNDER_ACCEPTED: i32 = 1;
-
-
-    #[derive(PackedLayout, SpreadLayout, scale::Encode, scale::Decode)]
-    #[cfg_attr(feature = "std", derive(::scale_info::TypeInfo))]
-    pub struct Founder {
-        id: AccountId,
-        initial: bool,
-        required: bool,
-        vote_action: i32,
-        amount_promised: u128,
-        amount_funded: u128,
-    }
-
-    impl Founder {
-        pub fn is_accepted(&self) -> bool {
-            return self.vote_action == FOUNDER_ACCEPTED;
-        }
-
-        pub fn fund(&mut self, amount: u128) {
-            if self.amount_funded >= self.amount_promised {
-                panic!("user is alredy funded");
-            }
-            self.amount_funded += amount;
-        }
-
-        pub fn is_funded(&self) -> bool {
-            self.amount_funded >= self.amount_promised
-        }
-
-        pub fn is_completed(&self) -> bool {
-            if !self.required && self.vote_action == FOUNDER_REJECTED {
-                return true;
-            } else if self.is_funded() {
-                return true;
-            }
-            return false;
-        }
-
-        pub fn describe(&self) -> String {
-             ink_prelude::format!(
-                "Is Initial: {} Required: {} Is Rejected: {} Is Completed: {} Amount Promised: {} Total Amount Funded: {}",
-                self.initial,
-                self.required,
-                self.vote_action == FOUNDER_REJECTED,
-                self.is_completed(),
-                self.amount_promised,
-                self.amount_funded
-             )
-        }
-    }
 
     /// Defines the storage of your contract.
     /// Add new fields to the below struct in order
@@ -84,7 +36,6 @@ mod inkrement {
                 contract.name = init_name;
                 contract.enabled = false;
                 contract.defunct = false;
-                // contract.initial_founder = caller;
                 contract.founders.insert(0, &ink_prelude::vec![Founder {
                     // caller
                     id: caller,
@@ -94,10 +45,6 @@ mod inkrement {
                     amount_promised: initial_founder_picos_needed,
                     amount_funded: 0
                 }]);
-                // contract.founders_required.insert(caller, &true);
-                // contract.founders_amount_needed.insert(caller, &initial_founder_picos_needed);
-                // contract.founders_amount_funded.insert(caller, &0);
-
             })
         }
 
@@ -108,7 +55,6 @@ mod inkrement {
         pub fn default() -> Self {
             ink_lang::utils::initialize_contract(|_| {})
         }
-
 
         fn get_founder_list(&self) -> Vec<Founder> {
             self.founders.get(0).expect("could not get founder list!")
@@ -166,16 +112,14 @@ mod inkrement {
             let mut founders = self.get_founder_list();
             let founder_index = self.get_founder_index(caller).expect("caller is not a founder");
             let founder = &founders[founder_index];
-            assert!(founder.vote_action != FOUNDER_REJECTED, "founder has already rejected tribe.");
+            assert!(!founder.is_rejected(), "founder has already rejected tribe.");
 
             // we got this far, set action to ACCEPTED
             founders[founder_index].vote_action = FOUNDER_ACCEPTED;
 
             self.founders.insert(0, &founders);
-
         }
 
-        
         #[ink(message, payable, selector = 0xC4577B10)]
         pub fn fund_tribe(&mut self) {
             assert!(self.defunct == false, "tribe is defunct.");
@@ -203,8 +147,6 @@ mod inkrement {
 
             // calculate differences, send difference back to each founder
             // Dont implement this yet. 
-
-            
         }
 
         #[ink(message)]
@@ -218,8 +160,6 @@ mod inkrement {
             // if founder does NOT exist in founders_required, fail
             let mut founders = self.get_founder_list();
             let founder_index = self.get_founder_index(caller).expect("caller is not a founder.");
-
-
 
             founders[founder_index].vote_action = FOUNDER_REJECTED;
 
@@ -250,7 +190,6 @@ mod inkrement {
             founders[founder_index].describe()
         }
 
-
         #[ink(message)]
         pub fn add_founder(&mut self, potential_founder: AccountId, picos: u128, required: bool) {
             let caller = Self::env().caller();
@@ -273,14 +212,12 @@ mod inkrement {
                 assert!(founder.id != potential_founder, "founder already exists.");
 
                 // has any founder rejected? any amount funded?
-                if founder.vote_action == FOUNDER_REJECTED || founder.is_completed() || founder.is_accepted() || founder.amount_funded > 0 {
+                if founder.is_rejected() || founder.is_completed() || founder.is_accepted() || founder.amount_funded > 0 {
                     panic!("a founder has already performed an action against tribe.");
                 }
             }
 
             // we got this far, add the founder.
-            
-
             founders.push(Founder {
                 id: potential_founder,
                 initial: false,
@@ -310,14 +247,14 @@ mod inkrement {
         /// We test if the default constructor does its job.
         #[ink::test]
         fn inkrement_val_instantiates_correctly() {
-            let inkrement = Inkrement::default();
+            //let inkrement = Inkrement::default();
             // assert_eq!(inkrement.get(), 0);
         }
 
         /// We test a simple use case of our contract.
         #[ink::test]
         fn inkrement_val_can_be_incremented() {
-            let mut inkrement = Inkrement::new("hey".to_string(), 1);
+            //let mut inkrement = Inkrement::new("hey".to_string(), 1);
             // assert_eq!(inkrement.get(), 0);
             // inkrement.inc();
             // assert_eq!(inkrement.get(), 1);
