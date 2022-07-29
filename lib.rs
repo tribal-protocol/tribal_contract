@@ -71,7 +71,7 @@ mod inkrement {
 
             let all_founders = self.get_founder_list();
             for founder in all_founders {
-                if !founder.is_completed() {
+                if founder.has_pending_activity() {
                     return;
                 }
             }
@@ -203,7 +203,7 @@ mod inkrement {
                 assert!(founder.id != potential_founder, "founder already exists.");
 
                 // has any founder rejected? any amount funded?
-                if founder.is_rejected() || founder.is_completed() || founder.is_accepted() || founder.has_funds() {
+                if !founder.has_pending_activity() || founder.has_funds() {
                     panic!("a founder has already performed an action against tribe.");
                 }
             }
@@ -221,12 +221,9 @@ mod inkrement {
     /// module and test functions are marked with a `#[test]` attribute.
     /// The below code is technically just normal Rust code.
     #[cfg(test)]
-    mod tests {
-        /// Imports all the definitions from the outer scope so we can use them here.
-        //use super::*;
-
-        /// Imports `ink_lang` so we can use `#[ink::test]`.
-        use ink_lang as ink;
+    mod tests {        
+        //use super::*;        
+        //use ink_lang as ink;
 
 /*
         /// We test if the default constructor does its job.

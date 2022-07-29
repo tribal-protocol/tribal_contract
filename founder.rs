@@ -44,7 +44,7 @@ impl Founder {
     }
 
     pub fn fund(&mut self, amount: u128) -> u128 {
-        if (amount == 0) {
+        if amount == 0 {
             panic!("founder must fund greater than zero amount")
         }
         if !self.is_accepted() {
@@ -63,18 +63,27 @@ impl Founder {
         self.amount_funded > 0
     }
 
-    pub fn is_accepted(&self) -> bool {
-       return self.vote_action == FOUNDER_ACCEPTED;
+    pub fn has_pending_activity(&self) -> bool {
+
+        if self.vote_action == FOUNDER_PENDING  {
+            if self.required {
+                return true;
+            }
+            else {
+                return false;
+            }
+        } 
+        else if self.is_rejected() {
+            return false;
+        } 
+        else if self.is_funded() {
+            return false;
+        }
+        return true;
     }
 
-    pub fn is_completed(&self) -> bool {
-
-        if !self.required && self.is_rejected() {
-            return true;
-        } else if self.is_funded() {
-            return true;
-        }
-        return false;
+    pub fn is_accepted(&self) -> bool {
+       return self.vote_action == FOUNDER_ACCEPTED;
     }
 
     pub fn is_funded(&self) -> bool {
@@ -91,7 +100,7 @@ impl Founder {
             self.initial,
             self.required,
             self.is_rejected(),
-            self.is_completed(),
+            !self.has_pending_activity(),
             self.amount_promised,
             self.amount_funded
         )
@@ -182,38 +191,6 @@ mod founder_tests {
         };
     }
 
-    macro_rules! founder_is_accepted {
-        ($($name:ident: $value:expr,)*) => {
-        $(
-            #[ink::test]
-            fn $name() {
-                //ASSIGN
-                let alice = AccountId::try_from([0x0; 32]).unwrap();                
-                let (required, vote_action, expected) = $value;
-                let mut founder = Founder::new(alice, required, 5555).expect("expected founder");
-
-                //ACT
-                founder.vote_action = vote_action;
-                let result = founder.is_accepted();
-
-                //ASSERT                
-                assert!(founder.initial == false);
-                assert_eq!(founder.required, required);
-                assert_eq!(expected, result);
-            }
-        )*
-        }
-    }
-    founder_is_accepted! {
-        is_accpted_true_with_required_founder_accepted: (true, FOUNDER_ACCEPTED, true),
-        is_accpted_false_with_required_founder_pending: (true, FOUNDER_PENDING, false),
-        is_accpted_false_with_required_founder_rejected: (true, FOUNDER_REJECTED, false),
-
-        is_accpted_true_with_founder_accepted: (false, FOUNDER_ACCEPTED, true),
-        is_accpted_false_with_founder_pending: (false, FOUNDER_PENDING, false),
-        is_accpted_false_with_founder_rejected: (false, FOUNDER_REJECTED, false),
-    }
-
     #[ink::test]
     #[should_panic(expected = "founder has not accepted tribe")]
     fn fund_should_fail_when_tribe_is_not_accepted() {
@@ -281,4 +258,150 @@ mod founder_tests {
         founder.fund(5000);
     }
 
+    #[ink::test]
+    fn has_funds_should_return_true(){
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
+        founder.vote_action = FOUNDER_ACCEPTED;
+        
+        //ACT
+        founder.fund(100);
+
+        //ASSERT
+        assert!(founder.has_funds())
+    }
+
+    #[ink::test]
+    fn has_funds_should_return_false(){
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let founder = Founder::new(alice, true, 5000).expect("expected founder");
+        
+        //ACT
+        assert!(founder.has_funds() == false)
+    }
+
+    //required, vote_acount, promised, funded, expected
+    macro_rules! founder_has_pending_activity {
+        ($($name:ident: $value:expr,)*) => {
+        $(
+            #[ink::test]
+            fn $name() {
+                //ASSIGN
+                let alice = AccountId::try_from([0x0; 32]).unwrap();                
+                let (required, vote_action, promised, funded, expected) = $value;
+                let mut founder = Founder::new(alice, required, promised).expect("expected founder");
+                if (funded > 0) {
+                    founder.vote_action = FOUNDER_ACCEPTED;
+                    founder.fund(funded);
+                }
+                founder.vote_action = vote_action;
+
+                //ACT
+                let result = founder.has_pending_activity();
+
+                //ASSERT                
+                assert_eq!(expected, result);
+            }
+        )*
+        }
+    }
+    founder_has_pending_activity! {
+        required_pending_5000_0: (true, FOUNDER_PENDING, 5000, 0, true),
+        required_accepted_5000_0: (true, FOUNDER_ACCEPTED, 5000, 0, true),
+        required_accepted_5000_5000: (true, FOUNDER_ACCEPTED, 5000, 5000, false),
+        required_rejected_5000_0: (true, FOUNDER_REJECTED, 5000, 0, false),
+        required_rejected_5000_5000: (true, FOUNDER_REJECTED, 5000, 5000, false),
+
+        optional_pending_5000_0: (false, FOUNDER_PENDING, 5000, 0, false),
+        optional_accepted_5000_0: (false, FOUNDER_ACCEPTED, 5000, 0, true),
+        optional_accepted_5000_5000: (false, FOUNDER_ACCEPTED, 5000, 5000, false),
+        optional_rejected_5000_0: (false, FOUNDER_REJECTED, 5000, 0, false),
+        optional_rejected_5000_5000: (false, FOUNDER_REJECTED, 5000, 5000, false),
+    }
+    
+    macro_rules! founder_is_accepted {
+        ($($name:ident: $value:expr,)*) => {
+        $(
+            #[ink::test]
+            fn $name() {
+                //ASSIGN
+                let alice = AccountId::try_from([0x0; 32]).unwrap();                
+                let (required, vote_action, expected) = $value;
+                let mut founder = Founder::new(alice, required, 5555).expect("expected founder");
+
+                //ACT
+                founder.vote_action = vote_action;
+                let result = founder.is_accepted();
+
+                //ASSERT                
+                assert!(founder.initial == false);
+                assert_eq!(founder.required, required);
+                assert_eq!(expected, result);
+            }
+        )*
+        }
+    }
+    founder_is_accepted! {
+        is_accpted_true_with_required_founder_accepted: (true, FOUNDER_ACCEPTED, true),
+        is_accpted_false_with_required_founder_pending: (true, FOUNDER_PENDING, false),
+        is_accpted_false_with_required_founder_rejected: (true, FOUNDER_REJECTED, false),
+
+        is_accpted_true_with_founder_accepted: (false, FOUNDER_ACCEPTED, true),
+        is_accpted_false_with_founder_pending: (false, FOUNDER_PENDING, false),
+        is_accpted_false_with_founder_rejected: (false, FOUNDER_REJECTED, false),
+    }      
+
+    #[ink::test]
+    fn is_funded_should_return_expected() {
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
+        founder.vote_action = FOUNDER_ACCEPTED;
+
+        //ACT
+        assert!(founder.is_funded() == false);
+
+        founder.fund(1000);
+        assert!(founder.is_funded() == false);
+
+        founder.fund(1000);
+        assert!(founder.is_funded() == false);
+
+        founder.fund(1000);
+        assert!(founder.is_funded() == false);
+
+        founder.fund(1000);
+        assert!(founder.is_funded() == false);
+
+        founder.fund(1000);
+        assert!(founder.is_funded() == true);
+    }
+
+    macro_rules! founder_is_rejected {
+        ($($name:ident: $value:expr,)*) => {
+        $(
+            #[ink::test]
+            fn $name() {
+                //ASSIGN
+                let alice = AccountId::try_from([0x0; 32]).unwrap();                
+                let (vote_action, expected) = $value;
+                let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
+                founder.vote_action = vote_action;
+
+                //ACT
+                let result = founder.is_rejected();
+
+                //ASSERT                
+                assert_eq!(expected, result);
+            }
+        )*
+        }
+    }
+    founder_is_rejected! {
+        founder_is_rejected_pending: (FOUNDER_PENDING, false),
+        founder_is_rejected_accepted: (FOUNDER_ACCEPTED, false),
+        founder_is_rejected_rejected: (FOUNDER_REJECTED, true),    
+    }
 }
