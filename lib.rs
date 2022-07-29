@@ -30,14 +30,13 @@ mod inkrement {
         /// Constructor that initializes the tribe with a given `init_name`, `initial_founder_picos_needed` must not be 0
         #[ink(constructor, payable)]
         pub fn new(init_name: String, initial_founder_picos_needed: u128) -> Self {
-            assert!(initial_founder_picos_needed != 0, "initial founder picos must not be 0");
             ink_lang::utils::initialize_contract(|contract: &mut Self| {
                 let caller = Self::env().caller();
                 contract.name = init_name;
                 contract.enabled = false;
                 contract.defunct = false;                
                 contract.founders.insert(0, &ink_prelude::vec![
-                    Founder::initial_founder(caller, initial_founder_picos_needed)
+                    Founder::initial_founder(caller, initial_founder_picos_needed).expect("expected founder")
                 ]);
             })
         }
@@ -212,7 +211,7 @@ mod inkrement {
             }
 
             // we got this far, add the founder.
-            founders.push(Founder::new(potential_founder, required, picos));
+            founders.push(Founder::new(potential_founder, required, picos).expect("expected founder"));
 
             self.founders.insert(0, &founders);
         
@@ -226,7 +225,7 @@ mod inkrement {
     #[cfg(test)]
     mod tests {
         /// Imports all the definitions from the outer scope so we can use them here.
-        use super::*;
+        //use super::*;
 
         /// Imports `ink_lang` so we can use `#[ink::test]`.
         use ink_lang as ink;

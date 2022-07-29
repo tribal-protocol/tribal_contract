@@ -16,21 +16,31 @@ pub struct Founder {
 }
 
 impl Founder {
-    pub fn new (id: AccountId, required: bool, amount_promised: u128) -> Self {
-        Founder {
-             id: id,
-             initial: false,
-             required: required,
-             vote_action: FOUNDER_PENDING,
-             amount_promised: amount_promised,
-             amount_funded: 0
-         }
+    
+    pub fn new (id: AccountId, required: bool, amount_promised: u128) -> Result<Self, String> {
+        if amount_promised > 0 {  
+            return Ok(Self {
+                    id: id,
+                    initial: false,
+                    required: required,
+                    vote_action: FOUNDER_PENDING,
+                    amount_promised: amount_promised,
+                    amount_funded: 0
+                });
+        }
+        else {
+            Err( String::from("amount promised in picos must be greater than 0"))
+        }
     }
 
-    pub fn initial_founder(id: AccountId, amount_promised: u128) -> Self {
-        let mut founder = Founder::new(id, true, amount_promised);
-        founder.initial = true;
-        return founder;
+    pub fn initial_founder(id: AccountId, amount_promised: u128) -> Result<Self, String> {
+        match Founder::new(id, true, amount_promised) {
+            Ok(mut f) => {
+                f.initial = true;
+                Ok(f)
+            },
+            Err(err) => Err(err.into())
+        }
     }
 
     pub fn is_accepted(&self) -> bool {
@@ -97,7 +107,7 @@ mod founder_tests {
                 let (id, required, picos) = $value;
 
                 //ACT
-                let founder = Founder::new(id, required, picos);
+                let founder = Founder::new(id, required, picos).expect("expected founder");
 
                 //ASSERT
                 assert_eq!(founder.id, id);
@@ -113,28 +123,23 @@ mod founder_tests {
     founder_new_tests! {
         founder_new_0: (AccountId::try_from([0x0; 32]).unwrap(), false, 1234),
         founder_new_1: (AccountId::try_from([0x0; 32]).unwrap(), true, 1234),
-
         founder_new_2: (AccountId::try_from([0x1; 32]).unwrap(), false, 8899),
         founder_new_3: (AccountId::try_from([0x1; 32]).unwrap(), true, 8899),
     }
 
-/*
     #[ink::test]
-    fn founder_can_create () {
+    #[should_panic(expected = "amount promised in picos must be greater than 0")]
+    fn founder_must_provide_amount_promised()  {
         //ASSIGN
         let alice = AccountId::try_from([0x0; 32]).unwrap();
         
-        //ACT
-        let founder = Founder::new(alice, true, 1234);
+        //ACT        
+        match Founder::new(alice, false, 0) {
+            Ok(_) =>  {},
+            Err(e) => panic!("{}", e)
+        };
 
-        //ASSERT
-        assert_eq!(founder.id, alice);
-        assert!(founder.initial == false);
-        assert!(founder.required);
-        assert_eq!(founder.amount_promised, 1234);
-        assert_eq!(founder.amount_funded, 0);
     }
-*/
 
     #[ink::test]
     fn initial_founder_can_create() {
@@ -142,7 +147,7 @@ mod founder_tests {
         let alice = AccountId::try_from([0x0; 32]).unwrap();
         
         //ACT
-        let founder = Founder::initial_founder(alice, 1234);
+        let founder = Founder::initial_founder(alice, 1234).expect("expected founder");
 
         //ASSERT
         assert_eq!(founder.id, alice);
@@ -150,6 +155,19 @@ mod founder_tests {
         assert!(founder.required);
         assert_eq!(founder.amount_promised, 1234);
         assert_eq!(founder.amount_funded, 0);
-
     }
+
+    #[ink::test]
+    #[should_panic(expected = "amount promised in picos must be greater than 0")]
+    fn initial_founder_must_provide_amount_promised() {
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        
+        //ACT
+        match Founder::initial_founder(alice, 0) {
+            Ok(_) =>  {},
+            Err(e) => panic!("{}", e)
+        };
+    }
+
 }
