@@ -3,6 +3,7 @@ name = "inkrement"
 version = "0.1.0"
 authors = ["Alec Ghazarian <alec@tribalprotocol.io>", "Chris Erker <chris@tribalprotocol.io>"]
 edition = "2021"
+license = "Apache-2.0"
 
 [dependencies]
 ink_primitives = { version = "3.0", default-features = false }

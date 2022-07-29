@@ -63,7 +63,7 @@ impl Founder {
 /// The below code is technically just normal Rust code.
 #[cfg(test)]
 mod founder_tests {
-    //use crate::inkrement::{FOUNDER_ACCEPTED, FOUNDER_REJECTED, FOUNDER_PENDING};
+    use crate::inkrement::{FOUNDER_ACCEPTED, FOUNDER_REJECTED, FOUNDER_PENDING};
 
     /// Imports all the definitions from the outer scope so we can use them here.
     use super::*;
@@ -73,21 +73,19 @@ mod founder_tests {
 
     /// We test if the default constructor does its job.
     #[ink::test]
-    fn inkrement_val_instantiates_correctly() {
-        // let mut _nftoken = NFToken::deploy_mock(100);
-        // let alice = AccountId::try_from([0x0; 32]).unwrap();
+    fn founder_can_create () {
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
         // let bob = AccountId::try_from([0x1; 32]).unwrap();
-        // let charlie = AccountId::try_from([0x2; 32]).unwrap();
-
-//        let founder = Founder {
-//            id: caller,
-//            initial: true,
-//            required: true,
-//            vote_action: FOUNDER_PENDING,
-//            amount_promised: 1234,
-//            amount_funded: 0
-//        };
-        // assert_eq!(inkrement.get(), 0);
+        // let charlie = AccountId::try_from([0x2; 32]).unwrap();  
+       let founder = Founder {
+           id: alice,
+           initial: true,
+           required: true,
+           vote_action: FOUNDER_PENDING,
+           amount_promised: 1234,
+           amount_funded: 0
+       };
+        assert_eq!(founder.id, alice);
     }
 
     /// We test a simple use case of our contract.
