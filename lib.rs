@@ -212,14 +212,7 @@ mod inkrement {
             }
 
             // we got this far, add the founder.
-            founders.push(Founder {
-                id: potential_founder,
-                initial: false,
-                required: required,
-                vote_action: FOUNDER_PENDING,
-                amount_funded: 0,
-                amount_promised: picos
-            });
+            founders.push(Founder::new(potential_founder, required, picos));
 
             self.founders.insert(0, &founders);
         

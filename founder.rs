@@ -16,15 +16,21 @@ pub struct Founder {
 }
 
 impl Founder {
+    pub fn new (id: AccountId, required: bool, amount_promised: u128) -> Self {
+        Founder {
+             id: id,
+             initial: false,
+             required: required,
+             vote_action: FOUNDER_PENDING,
+             amount_promised: amount_promised,
+             amount_funded: 0
+         }
+    }
+
     pub fn initial_founder(id: AccountId, amount_promised: u128) -> Self {
-       Founder {
-            id: id,
-            initial: true,
-            required: true,
-            vote_action: FOUNDER_PENDING,
-            amount_promised: amount_promised,
-            amount_funded: 0
-        }
+        let mut founder = Founder::new(id, true, amount_promised);
+        founder.initial = true;
+        return founder;
     }
 
     pub fn is_accepted(&self) -> bool {
@@ -75,37 +81,75 @@ impl Founder {
 /// The below code is technically just normal Rust code.
 #[cfg(test)]
 mod founder_tests {
-    use crate::inkrement::{FOUNDER_ACCEPTED, FOUNDER_REJECTED, FOUNDER_PENDING};
-
-    /// Imports all the definitions from the outer scope so we can use them here.
     use super::*;
-
-    /// Imports `ink_lang` so we can use `#[ink::test]`.
     use ink_lang as ink;
 
-    /// We test if the default constructor does its job.
-    #[ink::test]
-    fn founder_can_create () {
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
-        // let bob = AccountId::try_from([0x1; 32]).unwrap();
-        // let charlie = AccountId::try_from([0x2; 32]).unwrap();  
-       let founder = Founder {
-           id: alice,
-           initial: true,
-           required: true,
-           vote_action: FOUNDER_PENDING,
-           amount_promised: 1234,
-           amount_funded: 0
-       };
-       assert_eq!(founder.id, alice);
+    //use crate::inkrement::{FOUNDER_ACCEPTED, FOUNDER_REJECTED, FOUNDER_PENDING};
+    // let bob = AccountId::try_from([0x1; 32]).unwrap();
+    // let charlie = AccountId::try_from([0x2; 32]).unwrap();  
+
+    macro_rules! founder_new_tests {
+        ($($name:ident: $value:expr,)*) => {
+        $(
+            #[ink::test]
+            fn $name() {
+                //ASSIGN
+                let (id, required, picos) = $value;
+
+                //ACT
+                let founder = Founder::new(id, required, picos);
+
+                //ASSERT
+                assert_eq!(founder.id, id);
+                assert!(founder.initial == false);
+                assert_eq!(founder.required, required);
+                assert_eq!(founder.amount_promised, picos);
+                assert_eq!(founder.amount_funded, 0);
+            }
+        )*
+        }
     }
 
-    /// We test a simple use case of our contract.
+    founder_new_tests! {
+        founder_new_0: (AccountId::try_from([0x0; 32]).unwrap(), false, 1234),
+        founder_new_1: (AccountId::try_from([0x0; 32]).unwrap(), true, 1234),
+
+        founder_new_2: (AccountId::try_from([0x1; 32]).unwrap(), false, 8899),
+        founder_new_3: (AccountId::try_from([0x1; 32]).unwrap(), true, 8899),
+    }
+
+/*
     #[ink::test]
-    fn inkrement_val_can_be_incremented() {
-        //let mut inkrement = Inkrement::new("hey".to_string(), 1);
-        // assert_eq!(inkrement.get(), 0);
-        // inkrement.inc();
-        // assert_eq!(inkrement.get(), 1);
+    fn founder_can_create () {
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        
+        //ACT
+        let founder = Founder::new(alice, true, 1234);
+
+        //ASSERT
+        assert_eq!(founder.id, alice);
+        assert!(founder.initial == false);
+        assert!(founder.required);
+        assert_eq!(founder.amount_promised, 1234);
+        assert_eq!(founder.amount_funded, 0);
+    }
+*/
+
+    #[ink::test]
+    fn initial_founder_can_create() {
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        
+        //ACT
+        let founder = Founder::initial_founder(alice, 1234);
+
+        //ASSERT
+        assert_eq!(founder.id, alice);
+        assert!(founder.initial);
+        assert!(founder.required);
+        assert_eq!(founder.amount_promised, 1234);
+        assert_eq!(founder.amount_funded, 0);
+
     }
 }
