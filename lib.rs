@@ -129,8 +129,6 @@ mod inkrement {
             let mut founders = self.get_founder_list();
             let founder_index = self.get_founder_index(caller).expect("caller is not a founder!");
 
-            assert!(founders[founder_index].is_accepted(), "founder has not accepted tribe.");
-
             founders[founder_index].fund(value);
 
             self.founders.insert(0, &founders);
@@ -205,7 +203,7 @@ mod inkrement {
                 assert!(founder.id != potential_founder, "founder already exists.");
 
                 // has any founder rejected? any amount funded?
-                if founder.is_rejected() || founder.is_completed() || founder.is_accepted() || founder.amount_funded > 0 {
+                if founder.is_rejected() || founder.is_completed() || founder.is_accepted() || founder.has_funds() {
                     panic!("a founder has already performed an action against tribe.");
                 }
             }
@@ -230,6 +228,7 @@ mod inkrement {
         /// Imports `ink_lang` so we can use `#[ink::test]`.
         use ink_lang as ink;
 
+/*
         /// We test if the default constructor does its job.
         #[ink::test]
         fn inkrement_val_instantiates_correctly() {
@@ -245,6 +244,7 @@ mod inkrement {
             // inkrement.inc();
             // assert_eq!(inkrement.get(), 1);
         }
+*/        
     }
 }
     

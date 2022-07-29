@@ -12,7 +12,7 @@ pub struct Founder {
     pub required: bool,
     pub vote_action: i32,
     pub amount_promised: u128,
-    pub amount_funded: u128,
+    amount_funded: u128,
 }
 
 impl Founder {
@@ -43,23 +43,28 @@ impl Founder {
         }
     }
 
+    pub fn fund(&mut self, amount: u128) -> u128 {
+        if (amount == 0) {
+            panic!("founder must fund greater than zero amount")
+        }
+        if !self.is_accepted() {
+            panic!("founder has not accepted tribe");
+        }
+        else if self.is_funded() {
+            panic!("founder has completed funding");
+        }
+        else {
+            self.amount_funded += amount;
+        }
+        self.amount_funded
+    }
+
+    pub fn has_funds(&self) -> bool {
+        self.amount_funded > 0
+    }
+
     pub fn is_accepted(&self) -> bool {
        return self.vote_action == FOUNDER_ACCEPTED;
-    }
-
-    pub fn fund(&mut self, amount: u128) {
-        if self.amount_funded >= self.amount_promised {
-            panic!("user is alredy funded");
-        }
-        self.amount_funded += amount;
-    }
-
-    pub fn is_funded(&self) -> bool {
-        self.amount_funded >= self.amount_promised
-    }
-
-    pub fn is_rejected(&self) -> bool {
-        self.vote_action == FOUNDER_REJECTED
     }
 
     pub fn is_completed(&self) -> bool {
@@ -70,6 +75,14 @@ impl Founder {
             return true;
         }
         return false;
+    }
+
+    pub fn is_funded(&self) -> bool {
+        self.amount_funded >= self.amount_promised
+    }
+
+    pub fn is_rejected(&self) -> bool {
+        self.vote_action == FOUNDER_REJECTED
     }
 
     pub fn describe(&self) -> String {
@@ -83,18 +96,18 @@ impl Founder {
             self.amount_funded
         )
     }
+
 }
 
 
-/// Unit tests in Rust are normally defined within such a `#[cfg(test)]`
-/// module and test functions are marked with a `#[test]` attribute.
-/// The below code is technically just normal Rust code.
+/// 
+/// Founder Unit Tests
+/// 
 #[cfg(test)]
 mod founder_tests {
     use super::*;
     use ink_lang as ink;
 
-    //use crate::inkrement::{FOUNDER_ACCEPTED, FOUNDER_REJECTED, FOUNDER_PENDING};
     // let bob = AccountId::try_from([0x1; 32]).unwrap();
     // let charlie = AccountId::try_from([0x2; 32]).unwrap();  
 
@@ -119,17 +132,16 @@ mod founder_tests {
         )*
         }
     }
-
     founder_new_tests! {
-        founder_new_0: (AccountId::try_from([0x0; 32]).unwrap(), false, 1234),
-        founder_new_1: (AccountId::try_from([0x0; 32]).unwrap(), true, 1234),
-        founder_new_2: (AccountId::try_from([0x1; 32]).unwrap(), false, 8899),
-        founder_new_3: (AccountId::try_from([0x1; 32]).unwrap(), true, 8899),
+        new_0: (AccountId::try_from([0x0; 32]).unwrap(), false, 1234),
+        new_1: (AccountId::try_from([0x0; 32]).unwrap(), true, 1234),
+        new_2: (AccountId::try_from([0x1; 32]).unwrap(), false, 8899),
+        new_3: (AccountId::try_from([0x1; 32]).unwrap(), true, 8899),
     }
 
     #[ink::test]
     #[should_panic(expected = "amount promised in picos must be greater than 0")]
-    fn founder_must_provide_amount_promised()  {
+    fn new_fails_when_amount_promised_is_zero()  {
         //ASSIGN
         let alice = AccountId::try_from([0x0; 32]).unwrap();
         
@@ -159,7 +171,7 @@ mod founder_tests {
 
     #[ink::test]
     #[should_panic(expected = "amount promised in picos must be greater than 0")]
-    fn initial_founder_must_provide_amount_promised() {
+    fn initial_founder_fails_when_amount_promised_is_zero() {
         //ASSIGN
         let alice = AccountId::try_from([0x0; 32]).unwrap();
         
@@ -168,6 +180,105 @@ mod founder_tests {
             Ok(_) =>  {},
             Err(e) => panic!("{}", e)
         };
+    }
+
+    macro_rules! founder_is_accepted {
+        ($($name:ident: $value:expr,)*) => {
+        $(
+            #[ink::test]
+            fn $name() {
+                //ASSIGN
+                let alice = AccountId::try_from([0x0; 32]).unwrap();                
+                let (required, vote_action, expected) = $value;
+                let mut founder = Founder::new(alice, required, 5555).expect("expected founder");
+
+                //ACT
+                founder.vote_action = vote_action;
+                let result = founder.is_accepted();
+
+                //ASSERT                
+                assert!(founder.initial == false);
+                assert_eq!(founder.required, required);
+                assert_eq!(expected, result);
+            }
+        )*
+        }
+    }
+    founder_is_accepted! {
+        is_accpted_true_with_required_founder_accepted: (true, FOUNDER_ACCEPTED, true),
+        is_accpted_false_with_required_founder_pending: (true, FOUNDER_PENDING, false),
+        is_accpted_false_with_required_founder_rejected: (true, FOUNDER_REJECTED, false),
+
+        is_accpted_true_with_founder_accepted: (false, FOUNDER_ACCEPTED, true),
+        is_accpted_false_with_founder_pending: (false, FOUNDER_PENDING, false),
+        is_accpted_false_with_founder_rejected: (false, FOUNDER_REJECTED, false),
+    }
+
+    #[ink::test]
+    #[should_panic(expected = "founder has not accepted tribe")]
+    fn fund_should_fail_when_tribe_is_not_accepted() {
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
+
+        //ACT
+        founder.fund(5000);
+    }
+
+    #[ink::test]
+    #[should_panic(expected = "founder must fund greater than zero amount")]
+    fn fund_should_fail_with_zero_fund_amount() {
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
+
+        //ACT
+        founder.fund(0);
+    }
+
+    #[ink::test]
+    fn fund_should_pass_when_tribe_is_accepted() {
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
+        founder.vote_action = FOUNDER_ACCEPTED;
+
+        //ACT
+        founder.fund(5000);
+    }
+
+    #[ink::test]
+    fn fund_should_allow_mutliple_fundings_until_promise_amount() {
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
+        founder.vote_action = FOUNDER_ACCEPTED;
+
+        //ACT
+        let round1= founder.fund(2000);
+        let round2= founder.fund(2000);
+        let round3= founder.fund(2000);
+
+        //ASSERT
+        assert_eq!(round1, 2000);
+        assert_eq!(round2, 4000);
+        assert_eq!(round3, 6000);
+        assert!(founder.is_funded());
+    }
+    
+    #[ink::test]
+    #[should_panic(expected = "founder has completed funding")]
+    fn fund_should_fail_when_founder_already_funded() {
+        //ASSIGN
+        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
+        founder.vote_action = FOUNDER_ACCEPTED;
+
+        //ACT
+        assert!(founder.is_funded() == false);
+        founder.fund(5000);
+        assert!(founder.is_funded());
+        founder.fund(5000);
     }
 
 }
