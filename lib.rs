@@ -13,9 +13,6 @@ mod inkrement {
     pub const FOUNDER_PENDING: i32 = 0;
     pub const FOUNDER_ACCEPTED: i32 = 1;
 
-    /// Defines the storage of your contract.
-    /// Add new fields to the below struct in order
-    /// to add new static storage fields to your contract.
     #[ink(storage)]
     #[derive(SpreadAllocate)]
     pub struct Inkrement {
@@ -41,12 +38,28 @@ mod inkrement {
             })
         }
 
+/*
         /// Constructor that initializes the `bool` value to `false`.
         ///
         /// Constructors can delegate to other constructors.
         #[ink(constructor)]
         pub fn default() -> Self {
             ink_lang::utils::initialize_contract(|_| {})
+        }
+*/
+        fn activate_tribe(&mut self) {
+            if self.enabled && !self.defunct {
+                return;
+            }
+
+            let all_founders = self.get_founder_list();
+            for founder in all_founders {
+                if founder.has_pending_activity() {
+                    return;
+                }
+            }
+
+            self.enabled = true;
         }
 
         fn get_founder_list(&self) -> Vec<Founder> {
@@ -64,38 +77,6 @@ mod inkrement {
             return None;
         }
 
-        fn check_and_activate_tribe(&mut self) {
-            if self.enabled && !self.defunct {
-                return;
-            }
-
-            let all_founders = self.get_founder_list();
-            for founder in all_founders {
-                if founder.has_pending_activity() {
-                    return;
-                }
-            }
-
-            self.enabled = true;
-        }
-
-
-        /// Simply returns the current value of our `bool`.
-        #[ink(message)]
-        pub fn get_tribe(&self) -> String {
-
-            // get all founders
-            // BASE58ENCODE ACCOUNTID! 
-
-            ink_prelude::format!(
-                "Name: {}, Enabled: {}, Defunct: {}",
-                &self.name,
-                &self.enabled,
-                &self.defunct
-            )
-        }
-
-
         #[ink(message)]
         pub fn accept_tribe(&mut self) {
             assert!(self.defunct == false, "tribe is defunct.");
@@ -111,74 +92,6 @@ mod inkrement {
             founders[founder_index].vote_action = FOUNDER_ACCEPTED;
 
             self.founders.insert(0, &founders);
-        }
-
-        #[ink(message, payable, selector = 0xC4577B10)]
-        pub fn fund_tribe(&mut self) {
-            assert!(self.defunct == false, "tribe is defunct.");
-            assert!(self.enabled == false, "tribe is already enabled.");
-            let caller = self.env().caller();
-            let value = self.env().transferred_value();
-            
-            ink_env::debug_println!(
-                "received payment: {} from {:?}",
-                value,
-                caller
-            );
-
-            let mut founders = self.get_founder_list();
-            let founder_index = self.get_founder_index(caller).expect("caller is not a founder!");
-
-            founders[founder_index].fund(value);
-
-            self.founders.insert(0, &founders);
-            
-            self.check_and_activate_tribe();
-            
-
-            // calculate differences, send difference back to each founder
-            // Dont implement this yet. 
-        }
-
-        #[ink(message)]
-        pub fn reject_tribe(&mut self) {
-            let caller = self.env().caller();
-
-            // if defunct or enabled, fail
-            assert!(self.defunct == false, "tribe is defunct.");
-            assert!(self.enabled == false, "tribe is already enabled.");
-            
-            // if founder does NOT exist in founders_required, fail
-            let mut founders = self.get_founder_list();
-            let founder_index = self.get_founder_index(caller).expect("caller is not a founder.");
-
-            founders[founder_index].vote_action = FOUNDER_REJECTED;
-
-            if founders[founder_index].required {
-                self.defunct = true;
-
-                // TODO REFUND EVERYONE WHO SENT UNITS
-            } else {
-                self.check_and_activate_tribe();
-            }
-
-            self.founders.insert(0, &founders);
-            // if any founder has already funded tribe, return funds to each founder
-            // TODO
-
-        }
-
-        #[ink(message)]
-        pub fn get_founder_status(&self, founder: AccountId) -> String {
-            let founders = self.get_founder_list();
-            let founder_index = match self.get_founder_index(founder) {
-                Some(v) => v,
-                None => {
-                    return ink_prelude::format!("Account is not a founder!");
-                }
-            };
-
-            founders[founder_index].describe()
         }
 
         #[ink(message)]
@@ -211,37 +124,210 @@ mod inkrement {
             // we got this far, add the founder.
             founders.push(Founder::new(potential_founder, required, picos).expect("expected founder"));
 
+            self.founders.insert(0, &founders);        
+
+        }
+
+        #[ink(message, payable, selector = 0xC4577B10)]
+        pub fn fund_tribe(&mut self) {
+            assert!(self.defunct == false, "tribe is defunct.");
+            assert!(self.enabled == false, "tribe is already enabled.");
+            let caller = self.env().caller();
+            let value = self.env().transferred_value();
+            
+            ink_env::debug_println!(
+                "received payment: {} from {:?}",
+                value,
+                caller
+            );
+
+            let mut founders = self.get_founder_list();
+            let founder_index = self.get_founder_index(caller).expect("caller is not a founder!");
+
+            founders[founder_index].fund(value);
+
             self.founders.insert(0, &founders);
-        
+            
+            self.activate_tribe();
+            
+
+            // calculate differences, send difference back to each founder
+            // Dont implement this yet. 
+        }
+
+        #[ink(message)]
+        pub fn get_founder_status(&self, founder: AccountId) -> String {
+            let founders = self.get_founder_list();
+            let founder_index = match self.get_founder_index(founder) {
+                Some(v) => v,
+                None => {
+                    return ink_prelude::format!("Account is not a founder!");
+                }
+            };
+
+            founders[founder_index].describe()
+        }
+
+        #[ink(message)]
+        pub fn get_tribe(&self) -> String {
+
+            // get all founders
+            // BASE58ENCODE ACCOUNTID! 
+
+            ink_prelude::format!(
+                "Name: {}, Enabled: {}, Defunct: {}",
+                &self.name,
+                &self.enabled,
+                &self.defunct
+            )
+        }
+
+        #[ink(message)]
+        pub fn reject_tribe(&mut self) {
+            let caller = self.env().caller();
+
+            // if defunct or enabled, fail
+            assert!(self.defunct == false, "tribe is defunct.");
+            assert!(self.enabled == false, "tribe is already enabled.");
+            
+            // if founder does NOT exist in founders_required, fail
+            let mut founders = self.get_founder_list();
+            let founder_index = self.get_founder_index(caller).expect("caller is not a founder.");
+
+            founders[founder_index].vote_action = FOUNDER_REJECTED;
+
+            if founders[founder_index].required {
+                self.defunct = true;
+
+                // TODO REFUND EVERYONE WHO SENT UNITS
+            } else {
+                self.activate_tribe();
+            }
+
+            self.founders.insert(0, &founders);
+            // if any founder has already funded tribe, return funds to each founder
+            // TODO
 
         }
     }
 
-    /// Unit tests in Rust are normally defined within such a `#[cfg(test)]`
-    /// module and test functions are marked with a `#[test]` attribute.
-    /// The below code is technically just normal Rust code.
     #[cfg(test)]
     mod tests {        
-        //use super::*;        
-        //use ink_lang as ink;
+        use super::*;        
+        use ink_lang as ink;
 
-/*
+        const NAME: &str = "a test tribe";
+
         /// We test if the default constructor does its job.
         #[ink::test]
-        fn inkrement_val_instantiates_correctly() {
-            //let inkrement = Inkrement::default();
-            // assert_eq!(inkrement.get(), 0);
+        fn create_tribe_success() {
+            //ACT
+            let tribe = Inkrement::new(NAME.to_string(), 5000);
+
+            //ASSERT
+            assert_eq!(tribe.name, NAME.to_string());
+            assert!(!tribe.enabled);
+            assert!(!tribe.defunct);
         }
 
-        /// We test a simple use case of our contract.
         #[ink::test]
-        fn inkrement_val_can_be_incremented() {
-            //let mut inkrement = Inkrement::new("hey".to_string(), 1);
-            // assert_eq!(inkrement.get(), 0);
-            // inkrement.inc();
-            // assert_eq!(inkrement.get(), 1);
+        fn create_tribe_contains_only_initial_founder() {
+            //ASSIGN
+            let tribe = Inkrement::new(NAME.to_string(), 5000);
+
+            //ACT
+            assert!(tribe.founders.contains(0));
+            let founder_vec = tribe.founders.get(0).expect("expected vector of founders");
+
+            //ASSERT
+            assert_eq!(tribe.name, NAME.to_string());
+            assert_eq!(founder_vec.len(), 1);
+            assert!(founder_vec[0].initial);  //assert only member of newly started tribe is the initial founder
         }
-*/        
+    
+        #[ink::test]
+        fn get_founder_list_should_return_vec() {
+            //ASSIGN
+            let tribe = Inkrement::new(NAME.to_string(), 5000);
+
+            //ACT
+            let founder_list = tribe.get_founder_list();
+
+            //ASSERT
+            assert_eq!(founder_list.len(), 1);
+        }
+
+        #[ink::test]
+        fn get_founder_index_should_return_initial_founder_index() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+
+            //ACT
+            let tribe = Inkrement::new(NAME.to_string(), 5000);
+            match tribe.get_founder_index(alice) {
+                Some(index) => {
+                    let founders = tribe.get_founder_list();
+                    let alice_founder = &founders[index];
+
+                    //ASSERT
+                    assert_eq!(alice_founder.id, alice);
+                },
+                None => panic!("founder index not found"),
+            } 
+        }
+
+        #[ink::test]
+        fn get_founder_index_should_not_find_index() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]);
+            let bob= AccountId::from([0x1; 32]);
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+
+            //ACT
+            let tribe = Inkrement::new(NAME.to_string(), 5000);
+            match tribe.get_founder_index(bob) {
+                Some(_) => assert!(false), 
+                None => assert!(true),
+            } 
+        }
+
+        #[ink::test]
+        fn activate_tribe_with_no_activity_should_have_no_effect() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let mut tribe = Inkrement::new(NAME.to_string(), 5000);
+
+            //ACT
+            tribe.activate_tribe();
+
+            //ASSERT
+            assert!(tribe.enabled == false)
+        }
+    
+        #[ink::test]
+        fn active_tribe_with_funded_activity_should_enable() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let mut tribe = Inkrement::new(NAME.to_string(), 5000);
+
+            /* Update Alice in founders list to accept and fully fund tribe */
+            let alice_index = tribe.get_founder_index(alice).expect("alice should be initial founder");
+            let mut founders = tribe.get_founder_list();
+            founders[alice_index].vote_action = FOUNDER_ACCEPTED;
+            founders[alice_index].fund(5000);
+            tribe.founders.insert(0, &founders);
+
+            //ACT
+            let prev_enabled = tribe.enabled;
+            tribe.activate_tribe();
+
+            //ASSERT
+            assert!(prev_enabled == false);
+            assert!(tribe.enabled);
+        }
     }
 }
     

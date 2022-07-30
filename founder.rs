@@ -159,7 +159,6 @@ mod founder_tests {
             Ok(_) =>  {},
             Err(e) => panic!("{}", e)
         };
-
     }
 
     #[ink::test]
