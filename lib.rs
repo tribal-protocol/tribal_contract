@@ -15,7 +15,7 @@ mod inkrement {
 
     #[ink(storage)]
     #[derive(SpreadAllocate)]
-    pub struct Inkrement {
+    pub struct TribeContract {
         /// Stores a single `bool` value on the storage.
         enabled: bool,
         defunct: bool,
@@ -23,7 +23,7 @@ mod inkrement {
         founders: ink_storage::Mapping<u32, Vec<Founder>>
     }
 
-    impl Inkrement {
+    impl TribeContract {
         /// Constructor that initializes the tribe with a given `init_name`, `initial_founder_picos_needed` must not be 0
         #[ink(constructor, payable)]
         pub fn new(init_name: String, initial_founder_picos_needed: u128) -> Self {
@@ -38,15 +38,6 @@ mod inkrement {
             })
         }
 
-/*
-        /// Constructor that initializes the `bool` value to `false`.
-        ///
-        /// Constructors can delegate to other constructors.
-        #[ink(constructor)]
-        pub fn default() -> Self {
-            ink_lang::utils::initialize_contract(|_| {})
-        }
-*/
         fn activate_tribe(&mut self) {
             if self.enabled && !self.defunct {
                 return;
@@ -79,14 +70,14 @@ mod inkrement {
 
         #[ink(message)]
         pub fn accept_tribe(&mut self) {
-            assert!(self.defunct == false, "tribe is defunct.");
-            assert!(self.enabled == false, "tribe is already enabled.");
+            assert!(self.defunct == false, "tribe is defunct");
+            assert!(self.enabled == false, "tribe is already enabled");
 
             let caller = self.env().caller();
             let mut founders = self.get_founder_list();
             let founder_index = self.get_founder_index(caller).expect("caller is not a founder");
             let founder = &founders[founder_index];
-            assert!(!founder.is_rejected(), "founder has already rejected tribe.");
+            assert!(!founder.is_rejected(), "founder has already rejected tribe");
 
             // we got this far, set action to ACCEPTED
             founders[founder_index].vote_action = FOUNDER_ACCEPTED;
@@ -218,11 +209,10 @@ mod inkrement {
 
         const NAME: &str = "a test tribe";
 
-        /// We test if the default constructor does its job.
         #[ink::test]
         fn create_tribe_success() {
             //ACT
-            let tribe = Inkrement::new(NAME.to_string(), 5000);
+            let tribe = TribeContract::new(NAME.to_string(), 5000);
 
             //ASSERT
             assert_eq!(tribe.name, NAME.to_string());
@@ -233,7 +223,7 @@ mod inkrement {
         #[ink::test]
         fn create_tribe_contains_only_initial_founder() {
             //ASSIGN
-            let tribe = Inkrement::new(NAME.to_string(), 5000);
+            let tribe = TribeContract::new(NAME.to_string(), 5000);
 
             //ACT
             assert!(tribe.founders.contains(0));
@@ -246,9 +236,46 @@ mod inkrement {
         }
     
         #[ink::test]
+        fn activate_tribe_with_no_activity_should_have_no_effect() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let mut tribe = TribeContract::new(NAME.to_string(), 5000);
+
+            //ACT
+            tribe.activate_tribe();
+
+            //ASSERT
+            assert!(tribe.enabled == false)
+        }
+    
+        #[ink::test]
+        fn active_tribe_with_funded_activity_should_enable() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let mut tribe = TribeContract::new(NAME.to_string(), 5000);
+
+            /* Update Alice in founders list to accept and fully fund tribe */
+            let alice_index = tribe.get_founder_index(alice).expect("alice should be initial founder");
+            let mut founders = tribe.get_founder_list();
+            founders[alice_index].vote_action = FOUNDER_ACCEPTED;
+            founders[alice_index].fund(5000);
+            tribe.founders.insert(0, &founders);
+
+            //ACT
+            let prev_enabled = tribe.enabled;
+            tribe.activate_tribe();
+
+            //ASSERT
+            assert!(prev_enabled == false);
+            assert!(tribe.enabled);
+        }
+
+        #[ink::test]
         fn get_founder_list_should_return_vec() {
             //ASSIGN
-            let tribe = Inkrement::new(NAME.to_string(), 5000);
+            let tribe = TribeContract::new(NAME.to_string(), 5000);
 
             //ACT
             let founder_list = tribe.get_founder_list();
@@ -264,7 +291,7 @@ mod inkrement {
             ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
 
             //ACT
-            let tribe = Inkrement::new(NAME.to_string(), 5000);
+            let tribe = TribeContract::new(NAME.to_string(), 5000);
             match tribe.get_founder_index(alice) {
                 Some(index) => {
                     let founders = tribe.get_founder_list();
@@ -285,7 +312,7 @@ mod inkrement {
             ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
 
             //ACT
-            let tribe = Inkrement::new(NAME.to_string(), 5000);
+            let tribe = TribeContract::new(NAME.to_string(), 5000);
             match tribe.get_founder_index(bob) {
                 Some(_) => assert!(false), 
                 None => assert!(true),
@@ -293,40 +320,39 @@ mod inkrement {
         }
 
         #[ink::test]
-        fn activate_tribe_with_no_activity_should_have_no_effect() {
+        #[should_panic(expected = "caller is not a founder")]   
+        fn accept_tribe_should_fail_when_caller_is_not_founder() {
             //ASSIGN
             let alice = AccountId::from([0x0; 32]); 
             ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
-            let mut tribe = Inkrement::new(NAME.to_string(), 5000);
+            let mut tribe = TribeContract::new(NAME.to_string(), 5000);
 
             //ACT
-            tribe.activate_tribe();
-
-            //ASSERT
-            assert!(tribe.enabled == false)
+            let bob = AccountId::from([0x1; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(bob);
+            tribe.accept_tribe();
         }
-    
+
         #[ink::test]
-        fn active_tribe_with_funded_activity_should_enable() {
+        #[should_panic(expected = "founder has already rejected tribe")]   
+        fn accept_tribe_should_fail_when_caller_already_rejected_tribe() {
             //ASSIGN
             let alice = AccountId::from([0x0; 32]); 
             ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
-            let mut tribe = Inkrement::new(NAME.to_string(), 5000);
-
-            /* Update Alice in founders list to accept and fully fund tribe */
-            let alice_index = tribe.get_founder_index(alice).expect("alice should be initial founder");
-            let mut founders = tribe.get_founder_list();
-            founders[alice_index].vote_action = FOUNDER_ACCEPTED;
-            founders[alice_index].fund(5000);
-            tribe.founders.insert(0, &founders);
+            let mut tribe = TribeContract::new(NAME.to_string(), 5000);
 
             //ACT
-            let prev_enabled = tribe.enabled;
-            tribe.activate_tribe();
+            match tribe.get_founder_index(alice) {
+                Some(index) => {
+                    // Mark founder as rejected
+                    let mut founders = tribe.get_founder_list();
+                    founders[index].vote_action = FOUNDER_REJECTED;
+                    tribe.founders.insert(0, &founders);
 
-            //ASSERT
-            assert!(prev_enabled == false);
-            assert!(tribe.enabled);
+                    tribe.accept_tribe();        
+                },
+                None => panic!("founder index not found"),
+            } 
         }
     }
 }
