@@ -117,9 +117,6 @@ mod founder_tests {
     use super::*;
     use ink_lang as ink;
 
-    // let bob = AccountId::try_from([0x1; 32]).unwrap();
-    // let charlie = AccountId::try_from([0x2; 32]).unwrap();  
-
     macro_rules! founder_new_tests {
         ($($name:ident: $value:expr,)*) => {
         $(
