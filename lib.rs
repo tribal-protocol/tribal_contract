@@ -651,7 +651,14 @@ mod tribe {
             ink_env::debug_println!("received status: {} ", status);
 
             //ASSERT
-            assert_eq!(status, "Is Initial: true Required: true Is Rejected: false Is Completed: false Amount Promised: 5000 Total Amount Funded: 0");
+            assert_eq!(status, r#"{
+    "initial": true,
+    "required": true,
+    "rejected": false,
+    "completed": false,
+    "amount_promised": 5000,
+    "amount_funded": 0
+}"#);
         }
         
 /******************************** get_tribe  ********************************/        

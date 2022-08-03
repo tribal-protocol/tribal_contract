@@ -94,16 +94,23 @@ impl Founder {
         self.vote_action == FOUNDER_REJECTED
     }
 
-    pub fn describe(&self) -> String {
-        ink_prelude::format!(
-            "Is Initial: {} Required: {} Is Rejected: {} Is Completed: {} Amount Promised: {} Total Amount Funded: {}",
-            self.initial,
-            self.required,
-            self.is_rejected(),
-            !self.has_pending_activity(),
-            self.amount_promised,
-            self.amount_funded
-        )
+    pub fn describe(&self) -> String { 
+
+        ink_prelude::format!(r#"{{
+    "initial": {},
+    "required": {},
+    "rejected": {},
+    "completed": {},
+    "amount_promised": {},
+    "amount_funded": {}
+}}"#, 
+          self.initial,
+          self.required,
+          self.is_rejected(),
+          !self.has_pending_activity(),
+          self.amount_promised,
+          self.amount_funded
+      )
     }
 
 }
