@@ -173,12 +173,12 @@ mod tribe {
 
         #[ink(message)]
         pub fn reject_tribe(&mut self) {
+            // if defunct or enabled, fail
+            assert!(self.defunct == false, "tribe is defunct");
+            assert!(self.enabled == false, "tribe is already active");
+
             let caller = self.env().caller();
 
-            // if defunct or enabled, fail
-            assert!(self.defunct == false, "tribe is defunct.");
-            assert!(self.enabled == false, "tribe is already enabled.");
-            
             // if founder does NOT exist in founders_required, fail
             let mut founders = self.get_founder_list();
             let founder_index = self.get_founder_index(caller).expect("caller is not a founder.");
@@ -681,6 +681,85 @@ mod tribe {
             get_tribe_not_enabled_defunct: ("a defunct tribe", false, true, "Name: a defunct tribe, Enabled: false, Defunct: true"),
         }
     
+/******************************** reject_tribe  ********************************/                
+
+        #[ink::test]
+        #[should_panic(expected = "tribe is defunct")]   
+        fn reject_tribe_should_fail_when_tribe_is_defunct(){
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let mut tribe = TribeContract::new(NAME.to_string(), 5000);
+
+            //ACT
+            tribe.defunct = true;
+            tribe.reject_tribe();
+        }
+
+        #[ink::test]
+        #[should_panic(expected = "tribe is already active")]   
+        fn reject_tribe_should_fail_when_tribe_is_enabled(){
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let mut tribe = TribeContract::new(NAME.to_string(), 5000);
+
+            //ACT
+            tribe.enabled = true;
+            tribe.reject_tribe();
+        }
+
+        #[ink::test]
+        #[should_panic(expected = "caller is not a founder")]   
+        fn reject_tribe_should_fail_when_caller_is_not_founder() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let mut tribe = TribeContract::new(NAME.to_string(), 5000);
+
+            //ACT
+            let bob = AccountId::from([0x1; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(bob);
+            tribe.reject_tribe();
+        }
+
+        #[ink::test]
+        fn reject_tribe_should_succeed_and_mark_tribe_as_defunct() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let mut tribe = TribeContract::new(NAME.to_string(), 5000);
+            let prev_defunct = tribe.defunct;
+
+            //ACT            
+            tribe.reject_tribe();
+
+            //ASSERT
+            assert!(prev_defunct == false);
+            
+            assert!(tribe.defunct);
+        }
+    
+        #[ink::test]
+        fn reject_tribe_should_succeed_and_mark_founder_vote() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]); 
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let mut tribe = TribeContract::new(NAME.to_string(), 5000);
+
+            //ACT            
+            tribe.reject_tribe();
+
+            //ASSERT
+            let founders = tribe.get_founder_list();
+            match tribe.get_founder_index(alice) {
+                Some(index) => {
+                    let founder = &founders[index];
+                    assert!(founder.is_rejected());
+                },
+                None => panic!("founder index not found"),
+           } 
+        }
 
     }
 }
