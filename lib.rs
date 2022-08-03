@@ -639,6 +639,7 @@ mod tribe {
 
         #[ink::test]
         fn get_founder_status_should_return_founder_description() {
+            
             //ASSIGN
             let alice = AccountId::from([0x0; 32]);            
             ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
@@ -652,6 +653,34 @@ mod tribe {
             //ASSERT
             assert_eq!(status, "Is Initial: true Required: true Is Rejected: false Is Completed: false Amount Promised: 5000 Total Amount Funded: 0");
         }
+        
+/******************************** get_tribe  ********************************/        
+        macro_rules! get_tribe_should_return_expected {
+            ($($name:ident: $value:expr,)*) => {
+            $(
+                #[ink::test]
+                fn $name() {
+                    //ASSIGN
+                    let (name, enabled, defunct, expected) = $value;
+                    let mut tribe = TribeContract::new(name.to_string(), 5000);
+                    tribe.enabled = enabled;
+                    tribe.defunct = defunct;
+    
+                    //ACT
+                    let result = tribe.get_tribe();
+    
+                    //ASSERT                
+                    assert_eq!(expected, result);
+                }
+            )*
+            }
+        }
+        get_tribe_should_return_expected! {
+            get_tribe_not_enabled_not_defunct: ("alice's massive tribe", false, false, "Name: alice's massive tribe, Enabled: false, Defunct: false"),
+            get_tribe_enabled_not_defunct: ("yet another tribe", true, false, "Name: yet another tribe, Enabled: true, Defunct: false"),
+            get_tribe_not_enabled_defunct: ("a defunct tribe", false, true, "Name: a defunct tribe, Enabled: false, Defunct: true"),
+        }
+    
 
     }
 }
