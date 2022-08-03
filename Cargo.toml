@@ -1,5 +1,5 @@
 [package]
-name = "inkrement"
+name = "tribe_contract"
 version = "0.1.0"
 authors = ["Alec Ghazarian <alec@tribalprotocol.io>", "Chris Erker <chris@tribalprotocol.io>"]
 edition = "2021"
@@ -21,7 +21,7 @@ hex = "0.4.3"
 
 
 [lib]
-name = "inkrement"
+name = "tribe_contract"
 path = "lib.rs"
 crate-type = [
 	# Used for normal contract Wasm blobs.

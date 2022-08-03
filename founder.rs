@@ -2,7 +2,7 @@
 use ink_env::AccountId;
 use ink_storage::traits::{SpreadLayout, PackedLayout};
 use ink_prelude::{string::String};
-use crate::inkrement::{FOUNDER_ACCEPTED, FOUNDER_REJECTED, FOUNDER_PENDING};
+use crate::tribe::{FOUNDER_ACCEPTED, FOUNDER_REJECTED, FOUNDER_PENDING};
 
 #[derive(PackedLayout, SpreadLayout, scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(::scale_info::TypeInfo))]
@@ -139,17 +139,17 @@ mod founder_tests {
         }
     }
     founder_new_tests! {
-        new_0: (AccountId::try_from([0x0; 32]).unwrap(), false, 1234),
-        new_1: (AccountId::try_from([0x0; 32]).unwrap(), true, 1234),
-        new_2: (AccountId::try_from([0x1; 32]).unwrap(), false, 8899),
-        new_3: (AccountId::try_from([0x1; 32]).unwrap(), true, 8899),
+        new_0: (AccountId::from([0x0; 32]), false, 1234),
+        new_1: (AccountId::from([0x0; 32]), true, 1234),
+        new_2: (AccountId::from([0x0; 32]), false, 8899),
+        new_3: (AccountId::from([0x0; 32]), true, 8899),
     }
 
     #[ink::test]
     #[should_panic(expected = "amount promised in picos must be greater than 0")]
     fn new_fails_when_amount_promised_is_zero()  {
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         
         //ACT        
         match Founder::new(alice, false, 0) {
@@ -161,7 +161,7 @@ mod founder_tests {
     #[ink::test]
     fn initial_founder_can_create() {
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         
         //ACT
         let founder = Founder::initial_founder(alice, 1234).expect("expected founder");
@@ -178,7 +178,7 @@ mod founder_tests {
     #[should_panic(expected = "amount promised in picos must be greater than 0")]
     fn initial_founder_fails_when_amount_promised_is_zero() {
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         
         //ACT
         match Founder::initial_founder(alice, 0) {
@@ -191,7 +191,7 @@ mod founder_tests {
     #[should_panic(expected = "founder has not accepted tribe")]
     fn fund_should_fail_when_tribe_is_not_accepted() {
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
 
         //ACT
@@ -202,7 +202,7 @@ mod founder_tests {
     #[should_panic(expected = "founder must fund greater than zero amount")]
     fn fund_should_fail_with_zero_fund_amount() {
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
 
         //ACT
@@ -212,7 +212,7 @@ mod founder_tests {
     #[ink::test]
     fn fund_should_pass_when_tribe_is_accepted() {
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
         founder.vote_action = FOUNDER_ACCEPTED;
 
@@ -223,7 +223,7 @@ mod founder_tests {
     #[ink::test]
     fn fund_should_allow_mutliple_fundings_until_promise_amount() {
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
         founder.vote_action = FOUNDER_ACCEPTED;
 
@@ -243,7 +243,7 @@ mod founder_tests {
     #[should_panic(expected = "founder has completed funding")]
     fn fund_should_fail_when_founder_already_funded() {
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
         founder.vote_action = FOUNDER_ACCEPTED;
 
@@ -257,7 +257,7 @@ mod founder_tests {
     #[ink::test]
     fn has_funds_should_return_true(){
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
         founder.vote_action = FOUNDER_ACCEPTED;
         
@@ -271,7 +271,7 @@ mod founder_tests {
     #[ink::test]
     fn has_funds_should_return_false(){
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         let founder = Founder::new(alice, true, 5000).expect("expected founder");
         
         //ACT
@@ -285,7 +285,7 @@ mod founder_tests {
             #[ink::test]
             fn $name() {
                 //ASSIGN
-                let alice = AccountId::try_from([0x0; 32]).unwrap();                
+                let alice = AccountId::from([0x0; 32]); 
                 let (required, vote_action, promised, funded, expected) = $value;
                 let mut founder = Founder::new(alice, required, promised).expect("expected founder");
                 if (funded > 0) {
@@ -323,7 +323,7 @@ mod founder_tests {
             #[ink::test]
             fn $name() {
                 //ASSIGN
-                let alice = AccountId::try_from([0x0; 32]).unwrap();                
+                let alice = AccountId::from([0x0; 32]); 
                 let (required, vote_action, expected) = $value;
                 let mut founder = Founder::new(alice, required, 5555).expect("expected founder");
 
@@ -352,7 +352,7 @@ mod founder_tests {
     #[ink::test]
     fn is_funded_should_return_expected() {
         //ASSIGN
-        let alice = AccountId::try_from([0x0; 32]).unwrap();
+        let alice = AccountId::from([0x0; 32]); 
         let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
         founder.vote_action = FOUNDER_ACCEPTED;
 
@@ -381,7 +381,7 @@ mod founder_tests {
             #[ink::test]
             fn $name() {
                 //ASSIGN
-                let alice = AccountId::try_from([0x0; 32]).unwrap();                
+                let alice = AccountId::from([0x0; 32]); 
                 let (vote_action, expected) = $value;
                 let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
                 founder.vote_action = vote_action;

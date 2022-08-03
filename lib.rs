@@ -4,7 +4,7 @@ use ink_lang as ink;
 mod founder;
 
 #[ink::contract]
-mod inkrement {
+mod tribe {
     use ink_storage::traits::{SpreadAllocate};
     use ink_prelude::{string::String, vec::Vec};
     use crate::founder::*;
@@ -163,9 +163,6 @@ mod inkrement {
         #[ink(message)]
         pub fn get_tribe(&self) -> String {
 
-            // get all founders
-            // BASE58ENCODE ACCOUNTID! 
-
             ink_prelude::format!(
                 "Name: {}, Enabled: {}, Defunct: {}",
                 &self.name,
@@ -236,6 +233,7 @@ mod inkrement {
             assert!(founder_vec[0].initial);  //assert only member of newly started tribe is the initial founder
         }
     
+/******************************** activate_tribe  ********************************/                
         #[ink::test]
         fn activate_tribe_with_no_activity_should_have_no_effect() {
             //ASSIGN
@@ -273,6 +271,7 @@ mod inkrement {
             assert!(tribe.enabled);
         }
 
+/******************************** get_founder_list  ********************************/                
         #[ink::test]
         fn get_founder_list_should_return_vec() {
             //ASSIGN
@@ -285,6 +284,7 @@ mod inkrement {
             assert_eq!(founder_list.len(), 1);
         }
 
+/******************************** get_founder_index  ********************************/        
         #[ink::test]
         fn get_founder_index_should_return_initial_founder_index() {
             //ASSIGN
@@ -320,6 +320,7 @@ mod inkrement {
             } 
         }
 
+/******************************** accept_tribe  ********************************/
         #[ink::test]
         #[should_panic(expected = "tribe is defunct")]   
         fn accept_tribe_should_fail_when_tribe_is_defunct(){
@@ -403,7 +404,7 @@ mod inkrement {
             } 
         }
 
-/****************     add_founder    *****************/
+/******************************** add_founder  ********************************/
         #[ink::test]
         #[should_panic(expected = "tribe is defunct")]   
         fn add_founder_should_fail_when_tribe_is_defunct(){
@@ -530,8 +531,7 @@ mod inkrement {
             assert_eq!(founders.len(), 2);
         }
 
-/****************     fund_tribe     *****************/
-
+/******************************** fund_tribe  ********************************/
         #[ink::test]
         #[should_panic(expected = "tribe is defunct")]   
         fn fund_tribe_should_fail_when_tribe_is_defunct(){
@@ -618,6 +618,41 @@ mod inkrement {
             //ASSERT
             assert!(tribe.enabled);
         }
+    
+/******************************** get_founder_status  ********************************/
+        #[ink::test]
+        fn get_founder_status_should_return_not_found_message() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]);            
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let tribe = TribeContract::new(NAME.to_string(), 5000);
+            
+            //ACT
+            let bob = AccountId::from([0x1; 32]);
+            let status = tribe.get_founder_status(bob);
+            
+            ink_env::debug_println!("received status: {} ", status);
+
+            //ASSERT
+            assert_eq!(status, "Account is not a founder!");
+        }
+
+        #[ink::test]
+        fn get_founder_status_should_return_founder_description() {
+            //ASSIGN
+            let alice = AccountId::from([0x0; 32]);            
+            ink_env::test::set_caller::<ink_env::DefaultEnvironment>(alice);
+            let tribe = TribeContract::new(NAME.to_string(), 5000);
+            
+            //ACT
+            let status = tribe.get_founder_status(alice);
+            
+            ink_env::debug_println!("received status: {} ", status);
+
+            //ASSERT
+            assert_eq!(status, "Is Initial: true Required: true Is Rejected: false Is Completed: false Amount Promised: 5000 Total Amount Funded: 0");
+        }
+
     }
 }
     
