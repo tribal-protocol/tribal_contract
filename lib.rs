@@ -163,8 +163,11 @@ mod tribe {
         #[ink(message)]
         pub fn get_tribe(&self) -> String {
 
-            ink_prelude::format!(
-                "Name: {}, Enabled: {}, Defunct: {}",
+            ink_prelude::format!(r#"{{
+    "name": {},
+    "enabled": {},
+    "defunct": {}
+}}"#, 
                 &self.name,
                 &self.enabled,
                 &self.defunct
@@ -683,9 +686,9 @@ mod tribe {
             }
         }
         get_tribe_should_return_expected! {
-            get_tribe_not_enabled_not_defunct: ("alice's massive tribe", false, false, "Name: alice's massive tribe, Enabled: false, Defunct: false"),
-            get_tribe_enabled_not_defunct: ("yet another tribe", true, false, "Name: yet another tribe, Enabled: true, Defunct: false"),
-            get_tribe_not_enabled_defunct: ("a defunct tribe", false, true, "Name: a defunct tribe, Enabled: false, Defunct: true"),
+            get_tribe_not_enabled_not_defunct: ("alice's massive tribe", false, false, "{\n    \"name\": alice's massive tribe,\n    \"enabled\": false,\n    \"defunct\": false\n}"),
+            get_tribe_enabled_not_defunct: ("yet another tribe", true, false, "{\n    \"name\": yet another tribe,\n    \"enabled\": true,\n    \"defunct\": false\n}"),
+            get_tribe_not_enabled_defunct: ("a defunct tribe", false, true, "{\n    \"name\": a defunct tribe,\n    \"enabled\": false,\n    \"defunct\": true\n}"),
         }
     
 /******************************** reject_tribe  ********************************/                
