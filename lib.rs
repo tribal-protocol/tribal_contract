@@ -68,6 +68,7 @@ mod tribe {
             return None;
         }
 
+        /// Invoked by any founder to Accept Tribe, Before Funding
         #[ink(message)]
         pub fn accept_tribe(&mut self) {
             // is the tribe active/defunct? 
@@ -86,8 +87,9 @@ mod tribe {
             self.founders.insert(0, &founders);
         }
 
+        /// Invoked by the initial founder to invite an AccountId as a founder. This is done Before the Tribe is marked either as 'enabled' or 'defunct'
         #[ink(message)]
-        pub fn add_founder(&mut self, potential_founder: AccountId, picos: u128, required: bool) {
+        pub fn invite_founder(&mut self, potential_founder: AccountId, picos: u128, required: bool) {
             // is the tribe active/defunct? 
             assert!(self.defunct == false, "tribe is defunct");
             assert!(self.enabled == false, "tribe is already active");
@@ -119,6 +121,7 @@ mod tribe {
 
         }
 
+        /// Invoked by any founder After accept_tribe success
         #[ink(message, payable, selector = 0xC4577B10)]
         pub fn fund_tribe(&mut self) {
             // is the tribe active/defunct? 
@@ -147,6 +150,7 @@ mod tribe {
             // Dont implement this yet. 
         }
 
+        /// Returns a string representation of the current founder status for the given AccountId
         #[ink(message)]
         pub fn get_founder_status(&self, founder: AccountId) -> String {
             let founders = self.get_founder_list();
@@ -160,6 +164,7 @@ mod tribe {
             };
         }
 
+        /// Returns a string representation of the current tribe
         #[ink(message)]
         pub fn get_tribe(&self) -> String {
 
@@ -174,6 +179,7 @@ mod tribe {
             )
         }
 
+        /// Invoked by any founder to Reject the Tribe. Can be done After Accept, and can not be undone.
         #[ink(message)]
         pub fn reject_tribe(&mut self) {
             // if defunct or enabled, fail
