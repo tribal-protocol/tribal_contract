@@ -147,15 +147,10 @@ mod tribe {
         pub fn get_founder_status(&self, founder: AccountId) -> String {
             match self.get_founder_index(founder) {
                 Ok(v) => match self.get_founder_list() {
-                    Ok(founders) =>
-                        founders[v].describe(),
-                    Err(err) => {
-                        ink_prelude::format!("Problem with founder list; {}", err)
-                    }
+                    Ok(founders) => founders[v].describe(),
+                    Err(err) => ink_prelude::format!("Problem with founder list; {}", err)
                 },
-                Err(err) => {
-                    ink_prelude::format!("{}", err)
-                }
+                Err(err) => ink_prelude::format!("{}", err)
             }
         }
 
