@@ -89,7 +89,7 @@ mod tribe {
             Err(TribeError::NotAFounder)
         }
 
-        /// Invoked by any founder to Accept Tribe, Before Funding
+        /// Mark the verified founder with a vote action of FOUNDER_ACCEPTED
         #[ink(message)]
         pub fn accept_tribe(&mut self) -> Result<(), TribeError> {
             self.general_tribe_check()?;
@@ -114,7 +114,67 @@ mod tribe {
             Ok(())
         }
 
-        /// Invoked by the initial founder to invite an AccountId as a founder. This is done Before the Tribe is marked either as `enabled` or `defunct`
+        /// Can record multiple funding actions for the verified founder. Only available to founders who have already `accept_tribe`
+        #[ink(message, payable, selector = 0xC4577B10)]
+        pub fn fund_tribe(&mut self) -> Result<u128, TribeError> {
+            self.general_tribe_check()?;
+
+            let caller = self.env().caller();
+            let value = self.env().transferred_value();
+
+            ink_env::debug_println!(
+                "received payment: {} from {:?}",
+                value,
+                caller
+            );
+
+            let mut founders = self.get_founder_list()?;
+            let founder_index = self.get_founder_index(caller)?;
+            let total_funded_amount = founders[founder_index].fund(value)?;
+
+            self.founders.insert(0, &founders);
+
+            self.activate_tribe()?;
+
+            // calculate differences, send difference back to each founder
+            // Dont implement this yet.
+
+            Ok(total_funded_amount)
+        }
+
+        /// Returns current state of the founder as json
+        #[ink(message)]
+        pub fn get_founder_status(&self, founder: AccountId) -> String {
+            match self.get_founder_index(founder) {
+                Ok(v) => match self.get_founder_list() {
+                    Ok(founders) =>
+                        founders[v].describe(),
+                    Err(err) => {
+                        ink_prelude::format!("Problem with founder list; {}", err)
+                    }
+                },
+                Err(err) => {
+                    ink_prelude::format!("{}", err)
+                }
+            }
+        }
+
+        /// Returns current state of tribe as json
+        #[ink(message)]
+        pub fn get_tribe(&self) -> String {
+
+            ink_prelude::format!(r#"{{
+    "name": {},
+    "enabled": {},
+    "defunct": {}
+}}"#, 
+                &self.name,
+                &self.enabled,
+                &self.defunct
+            )
+        }
+
+        /// Attempt to include the `potential_founder` AccountId in the tribe contract’s founders collection. The initial founder must also provide the `amount_in_pico` to tribe and a flag to determine if this is a `required` founder
         #[ink(message)]
         pub fn invite_founder(&mut self, potential_founder: AccountId, amount_in_pico: u128, required: bool) -> Result<(), TribeError> {
             self.general_tribe_check()?;
@@ -155,67 +215,7 @@ mod tribe {
             Ok(())
         }
 
-        /// Invoked by any founder After accept_tribe success
-        #[ink(message, payable, selector = 0xC4577B10)]
-        pub fn fund_tribe(&mut self) -> Result<u128, TribeError> {
-            self.general_tribe_check()?;
-
-            let caller = self.env().caller();
-            let value = self.env().transferred_value();
-            
-            ink_env::debug_println!(
-                "received payment: {} from {:?}",
-                value,
-                caller
-            );
-
-            let mut founders = self.get_founder_list()?;
-            let founder_index = self.get_founder_index(caller)?;
-            let total_funded_amount = founders[founder_index].fund(value)?;
-
-            self.founders.insert(0, &founders);
-            
-            self.activate_tribe()?;
-
-            // calculate differences, send difference back to each founder
-            // Dont implement this yet.
-
-            Ok(total_funded_amount)
-        }
-
-        /// Returns a string representation of the current founder status for the given AccountId
-        #[ink(message)]
-        pub fn get_founder_status(&self, founder: AccountId) -> String {
-            match self.get_founder_index(founder) {
-                Ok(v) => match self.get_founder_list() {
-                    Ok(founders) =>
-                        founders[v].describe(),
-                    Err(err) => {
-                        ink_prelude::format!("Problem with founder list; {}", err)
-                    }
-                },
-                Err(err) => {
-                    ink_prelude::format!("{}", err)
-                }
-            }
-        }
-
-        /// Returns a string representation of the current tribe
-        #[ink(message)]
-        pub fn get_tribe(&self) -> String {
-
-            ink_prelude::format!(r#"{{
-    "name": {},
-    "enabled": {},
-    "defunct": {}
-}}"#, 
-                &self.name,
-                &self.enabled,
-                &self.defunct
-            )
-        }
-
-        /// Invoked by any founder to Reject the Tribe. Can be done After Accept, and can not be undone.
+        /// Attempts to mark the verified founder with a vote action of FOUNDER_REJECTED
         #[ink(message)]
         pub fn reject_tribe(&mut self) -> Result<(), TribeError> {
             self.general_tribe_check()?;
