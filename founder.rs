@@ -114,7 +114,6 @@ impl Founder {
     }
 }
 
-
 /// 
 /// Founder Unit Tests
 /// 
@@ -191,6 +190,7 @@ mod founder_tests {
         };
     }
 
+//***************************** fund() ***************************
     #[ink::test]
     fn fund_should_fail_when_tribe_is_not_accepted() {
         //ASSIGN
@@ -201,6 +201,20 @@ mod founder_tests {
         match founder.fund(5000) {
             Ok(_) => assert!(false, "Should not have passed"),
             Err(err) => assert_eq!(err, TribeError::FounderVoteActionPending)
+        }
+    }
+
+    #[ink::test]
+    fn fund_should_fail_when_founder_rejected_tribe() {
+        //ASSIGN
+        let alice = AccountId::from([0x0; 32]);
+        let mut founder = Founder::new(alice, true, 5000).expect("expected founder");
+        founder.vote_action = FOUNDER_REJECTED;
+
+        //ACT
+        match founder.fund(2000) {
+            Ok(_) => assert!(false, "Should not have passed"),
+            Err(err) => assert_eq!(err, TribeError::FounderRejectedInvitation)
         }
     }
 
