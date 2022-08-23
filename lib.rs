@@ -9,7 +9,7 @@ mod tribe {
     //use ink_env::{AccountId, return_value};
     use ink_storage::traits::{SpreadAllocate};
     use ink_prelude::{string::String, vec::Vec};
-    use crate::errors::TribeError;
+    use crate::errors::{TribeError};
     use crate::founder::*;
 
     pub const FOUNDER_REJECTED: i32 = -1;
@@ -73,7 +73,7 @@ mod tribe {
                 return Err(TribeError::TribeIsDefunct);
             }
             if self.enabled {
-                return Err(TribeError::ActiveTribeCannotAcceptAction);
+                return Err(TribeError::ActiveTribeCannotAcceptFounderAction);
             }
             Ok(())
         }
@@ -144,14 +144,10 @@ mod tribe {
 
         /// Returns current state of the founder as json
         #[ink(message)]
-        pub fn get_founder_status(&self, founder: AccountId) -> String {
-            match self.get_founder_index(founder) {
-                Ok(v) => match self.get_founder_list() {
-                    Ok(founders) => founders[v].describe(),
-                    Err(err) => ink_prelude::format!("Problem with founder list; {}", err)
-                },
-                Err(err) => ink_prelude::format!("{}", err)
-            }
+        pub fn get_founder_status(&self, founder: AccountId) -> Result<String, TribeError> {
+            let founder_index = self.get_founder_index(founder)?;
+            let founders = self.get_founder_list()?;
+            Ok(founders[founder_index].describe())
         }
 
         /// Returns current state of tribe as json
@@ -242,6 +238,7 @@ mod tribe {
     mod tests {
         use super::*;
         use ink_lang as ink;
+        use crate::errors::MyDisplay;
 
         const NAME: &str = "a test tribe";
 
@@ -340,7 +337,7 @@ mod tribe {
                     //ASSERT
                     assert_eq!(alice_founder.id, alice);
                 },
-                Err(err) => panic!("founder index not found; {}", err),
+                Err(err) => panic!("founder index not found; {}", err.fmt()),
             }
         }
 
@@ -373,7 +370,7 @@ mod tribe {
             match tribe.accept_tribe() {
                 Ok(_) => assert!(false, "Should not accept tribe"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::TribeIsDefunct, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::TribeIsDefunct, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -389,7 +386,7 @@ mod tribe {
             match tribe.accept_tribe() {
                 Ok(_) => assert!(false, "Should not accept tribe"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::ActiveTribeCannotAcceptAction, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::ActiveTribeCannotAcceptFounderAction, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -406,7 +403,7 @@ mod tribe {
             match tribe.accept_tribe() {
                 Ok(_) => assert!(false, "Should not accept tribe"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::NotAFounder, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::NotAFounder, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -428,11 +425,11 @@ mod tribe {
                     match tribe.accept_tribe() {
                         Ok(_) => assert!(false, "Should not accept tribe"),
                         //ASSERT
-                        Err(err) => assert_eq!(TribeError::FounderRejectedInvitation, err, "actual error received {}", err)
+                        Err(err) => assert_eq!(TribeError::FounderRejectedInvitation, err, "actual error received {}", err.fmt())
                     }
 
                 },
-                Err(err) => panic!("founder index not found; Error={}", err)
+                Err(err) => panic!("founder index not found; Error={}", err.fmt())
             }
         }
 
@@ -453,7 +450,7 @@ mod tribe {
                     let founder = &founders[index];
                     assert_eq!(founder.is_accepted(), false);
                 },
-                Err(err) => panic!("founder index not found; Error={}", err)
+                Err(err) => panic!("founder index not found; Error={}", err.fmt())
             }
         }
 
@@ -471,7 +468,7 @@ mod tribe {
             match tribe.invite_founder(bob, 4000, false) {
                 Ok(_) => assert!(false, "Invite founder should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::TribeIsDefunct, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::TribeIsDefunct, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -488,7 +485,7 @@ mod tribe {
             match tribe.invite_founder(bob, 4000, false) {
                 Ok(_) => assert!(false, "Invite founder should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::ActiveTribeCannotAcceptAction, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::ActiveTribeCannotAcceptFounderAction, err, "actual error received {}", err.fmt())
             }
 
         }
@@ -508,7 +505,7 @@ mod tribe {
             match tribe.invite_founder(charlie, 4000, false) {
                 Ok(_) => assert!(false, "Invite founder should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::NotAFounder, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::NotAFounder, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -528,7 +525,7 @@ mod tribe {
             match tribe.invite_founder(charlie, 4000, false) {
                 Ok(_) => assert!(false, "Invite founder should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::NotInitialFounder, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::NotInitialFounder, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -544,7 +541,7 @@ mod tribe {
             match tribe.invite_founder(alice, 4000, false) {
                 Ok(_) => assert!(false, "Invite founder should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::CanNotInviteInitialFounder, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::CanNotInviteInitialFounder, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -562,7 +559,7 @@ mod tribe {
             match tribe.invite_founder(bob, 4000, false) {
                 Ok(_) => assert!(false, "Invite founder should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::FounderAlreadyInvited, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::FounderAlreadyInvited, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -585,7 +582,7 @@ mod tribe {
             match tribe.invite_founder(charlie, 4000, false) {
                 Ok(_) => assert!(false, "Invite founder should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::TribeIsLocked, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::TribeIsLocked, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -619,7 +616,7 @@ mod tribe {
             match tribe.fund_tribe() {
                 Ok(_) => assert!(false, "fund tribe should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::TribeIsDefunct, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::TribeIsDefunct, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -635,7 +632,7 @@ mod tribe {
             match tribe.fund_tribe() {
                 Ok(_) => assert!(false, "fund tribe should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::ActiveTribeCannotAcceptAction, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::ActiveTribeCannotAcceptFounderAction, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -652,7 +649,7 @@ mod tribe {
             match tribe.fund_tribe() {
                 Ok(_) => assert!(false, "fund tribe should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::NotAFounder, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::NotAFounder, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -719,12 +716,11 @@ mod tribe {
 
             //ACT
             let bob = AccountId::from([0x1; 32]);
-            let status = tribe.get_founder_status(bob);
-
-            ink_env::debug_println!("received status: {} ", status);
-
-            //ASSERT
-            assert_eq!(status, "AccountId is not a Founder");
+            match tribe.get_founder_status(bob) {
+                Ok(_) => assert!(false, "should not pass"),
+                //ASSERT
+                Err(err) => assert_eq!(err, TribeError::NotAFounder)
+            }
         }
 
         #[ink::test]
@@ -736,7 +732,7 @@ mod tribe {
             let tribe = TribeContract::new(NAME.to_string(), 5000);
 
             //ACT
-            let status = tribe.get_founder_status(alice);
+            let status = tribe.get_founder_status(alice).expect("should pass");
 
             ink_env::debug_println!("received status: {} ", status);
 
@@ -809,7 +805,7 @@ mod tribe {
             match tribe.reject_tribe() {
                 Ok(_) => assert!(false, "reject tribe should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(err, TribeError::ActiveTribeCannotAcceptAction)
+                Err(err) => assert_eq!(err, TribeError::ActiveTribeCannotAcceptFounderAction)
             }
         }
 
@@ -826,7 +822,7 @@ mod tribe {
             match tribe.reject_tribe() {
                 Ok(_) => assert!(false, "reject tribe should not pass"),
                 //ASSERT
-                Err(err) => assert_eq!(TribeError::NotAFounder, err, "actual error received {}", err)
+                Err(err) => assert_eq!(TribeError::NotAFounder, err, "actual error received {}", err.fmt())
             }
         }
 
@@ -864,7 +860,7 @@ mod tribe {
                     let founder = &founders[index];
                     assert!(founder.is_rejected());
                 },
-                Err(err) => panic!("founder index not found; Error={}", err),
+                Err(err) => panic!("founder index not found; Error={}", err.fmt()),
             }
         }
 
