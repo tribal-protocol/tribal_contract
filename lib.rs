@@ -58,14 +58,14 @@ mod tribe {
 
             //TODO event goes here
 
-            return Ok(());
+            Ok(())
         }
 
         fn get_founder_list(&self) -> Result<Vec<Founder>,TribeError> {
-            return match self.founders.get(0) {
+            match self.founders.get(0) {
                 Some(list) => Ok(list),
                 None => Err(TribeError::FounderListNotFound)
-            };
+            }
         }
 
         fn general_tribe_check(&self) -> Result<(), TribeError> {
@@ -79,12 +79,10 @@ mod tribe {
         }
 
         fn get_founder_index(&self, founder_id: AccountId) -> Result<usize, TribeError> {
-            let mut index: usize = 0;
-            for founder in self.get_founder_list()? {
+            for (index, founder) in (self.get_founder_list()?).into_iter().enumerate() {
                 if founder_id == founder.id {
                     return Ok(index);
                 }
-                index += 1;
             }
             Err(TribeError::NotAFounder)
         }
@@ -104,7 +102,7 @@ mod tribe {
 
             let founder = &founders[founder_index];
             if founder.is_rejected() {
-                return Err(TribeError::FounderRejectedInvitation)
+                return Err(TribeError::FounderRejectedInvitation);
             }
 
             // we got this far, set action to ACCEPTED
@@ -181,7 +179,7 @@ mod tribe {
             let initial_founder = &founders[founder_index];
 
             // is the caller the initial_founder?
-            if initial_founder.initial == false {
+            if !initial_founder.initial {
                 return Err(TribeError::NotInitialFounder);
             }
 

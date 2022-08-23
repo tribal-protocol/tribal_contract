@@ -21,7 +21,7 @@ pub struct Founder {
 impl Founder {
     
     pub fn new (id: AccountId, required: bool, amount_promised: u128) -> Result<Self, TribeError> {
-        return if amount_promised > 0 {
+        if amount_promised > 0 {
             Ok(Self {
                 id,
                 initial: false,
@@ -67,19 +67,12 @@ impl Founder {
     pub fn has_pending_activity(&self) -> bool {
 
         if self.vote_action == FOUNDER_PENDING  {
-            return if self.required {
-                true
-            } else {
-                false
-            }
+            return self.required;
         } 
-        else if self.is_rejected() {
+        else if self.is_rejected() || self.is_funded() {
             return false;
         } 
-        else if self.is_funded() {
-            return false;
-        }
-        return true;
+        true
     }
 
     pub fn is_accepted(&self) -> bool {

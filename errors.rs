@@ -1,4 +1,4 @@
-use ink_prelude::{string::String, format};
+use ink_prelude::{string::{String, ToString}};
 
 #[derive(PartialEq, Debug, Eq, Clone, scale::Encode, scale::Decode)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -24,19 +24,19 @@ pub trait MyDisplay {
 impl MyDisplay for TribeError {
     fn fmt(&self) -> String {
         match self {
-            TribeError::ActiveTribeCannotAcceptFounderAction => format!("Active tribe cannot accept founder action"),
-            TribeError::AmountPromisedIsZero => format!("Amount promised in pico must be greater than 0"),
-            TribeError::CanNotInviteInitialFounder => format!("The initial founder can not be invited to join their own tribe"),
-            TribeError::FounderAlreadyInvited => format!("AccountId already exists as a Founder"),
-            TribeError::FounderListNotFound => format!("Tribe list of founders  not found"),
-            TribeError::FounderRejectedInvitation => format!("Founder already rejected invitation to tribe"),
-            TribeError::FounderVoteActionPending => format!("Founder has not taken an action on pending invitation"),
-            TribeError::FundingAlreadyCompleted => format!("Founder has already completed funding"),
-            TribeError::FundingAmountMustBeGreaterThanZero => format!("Funding amount must be greater than zero amount"),
-            TribeError::NotAFounder => format!("AccountId is not a Founder"),
-            TribeError::NotInitialFounder => format!("AccountId is not the Initial Founder"),
-            TribeError::TribeIsDefunct => format!("Tribe is defunct and cannot accept any more activity"),
-            TribeError::TribeIsLocked => format!("Tribe is locked due to founder activity")
+            TribeError::ActiveTribeCannotAcceptFounderAction => "Active tribe cannot accept founder action".to_string(),
+            TribeError::AmountPromisedIsZero => "Amount promised in pico must be greater than 0".to_string(),
+            TribeError::CanNotInviteInitialFounder => "The initial founder can not be invited to join their own tribe".to_string(),
+            TribeError::FounderAlreadyInvited => "AccountId already exists as a Founder".to_string(),
+            TribeError::FounderListNotFound => "Tribe list of founders  not found".to_string(),
+            TribeError::FounderRejectedInvitation => "Founder already rejected invitation to tribe".to_string(),
+            TribeError::FounderVoteActionPending => "Founder has not taken an action on pending invitation".to_string(),
+            TribeError::FundingAlreadyCompleted => "Founder has already completed funding".to_string(),
+            TribeError::FundingAmountMustBeGreaterThanZero => "Funding amount must be greater than zero amount".to_string(),
+            TribeError::NotAFounder => "AccountId is not a Founder".to_string(),
+            TribeError::NotInitialFounder => "AccountId is not the Initial Founder".to_string(),
+            TribeError::TribeIsDefunct => "Tribe is defunct and cannot accept any more activity".to_string(),
+            TribeError::TribeIsLocked => "Tribe is locked due to founder activity".to_string()
         }
     }
 }
