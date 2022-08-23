@@ -1,6 +1,6 @@
 [package]
 name = "tribe_contract"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Alec Ghazarian <alec@tribalprotocol.io>", "Chris Erker <chris@tribalprotocol.io>"]
 edition = "2021"
 license = "Apache-2.0"
