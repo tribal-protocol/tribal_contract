@@ -6,6 +6,7 @@ mod founder;
 
 #[ink::contract]
 mod tribe {
+    use errors::TribeError;
     //use ink_env::{AccountId, return_value};
     use ink_storage::traits::{SpreadAllocate};
     use ink_prelude::{string::String, vec::Vec};
@@ -26,7 +27,7 @@ mod tribe {
         founders: ink_storage::Mapping<u32, Vec<Founder>>
     }
 
-    impl TribeContract {
+    impl  {
         /// Constructor that initializes the tribe with a given `init_name`, `initial_founder_amount_in_pico_needed` must not be 0
         #[ink(constructor, payable)]
         pub fn new(init_name: String, initial_founder_amount_in_pico_needed: u128) -> Self {
@@ -229,6 +230,22 @@ mod tribe {
             // TODO
 
             Ok(())
+        }
+
+        #[ink(message)]
+        pub fn lease_content_from_user(&mut self, content_guid: String, user_content_signature: Vec<u8>) -> Result<String, TribeError> {
+
+            // is this a valid content_guid from the caller? 
+
+            // is the signature from the caller? 
+
+            // is there an active lease against this tribe for this content key?
+
+            // generate signature of content_key using contract's identity (tribe_content_signature)
+
+            // call content server with content_signature to symlink with tribe_content_signature
+
+            Ok("!".to_string())
         }
     }
 
